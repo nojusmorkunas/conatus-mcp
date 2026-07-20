@@ -60,7 +60,7 @@ After the package is published to npm, the command becomes:
 codex mcp add conatus \
   --env TASKS_BASE_URL=https://tasks.example.com \
   --env TASKS_API_TOKEN=tdm_replace_me \
-  -- npx -y @conatus/mcp-server
+  -- npx -y conatus-mcp
 ```
 
 For clients that use JSON configuration:
@@ -70,7 +70,7 @@ For clients that use JSON configuration:
   "mcpServers": {
     "conatus": {
       "command": "npx",
-      "args": ["-y", "@conatus/mcp-server"],
+      "args": ["-y", "conatus-mcp"],
       "env": {
         "TASKS_BASE_URL": "https://tasks.example.com",
         "TASKS_API_TOKEN": "tdm_replace_me"
@@ -197,10 +197,10 @@ npx @modelcontextprotocol/inspector node dist/stdio.js
 
 ## Publishing
 
-The package is self-contained and can be published from this repository after the `@conatus` npm scope and package name are available:
+The package is self-contained and published to npm as `conatus-mcp`:
 
 ```bash
-npm publish --access public
+npm publish
 ```
 
 Publishing automatically runs the test, lint, and build checks through `prepublishOnly`.
