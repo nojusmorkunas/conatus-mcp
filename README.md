@@ -197,7 +197,7 @@ npx @modelcontextprotocol/inspector node dist/stdio.js
 
 ## Publishing
 
-The package is self-contained and published to npm as `conatus-mcp`:
+Publish the self-contained package to npm as `conatus-mcp`:
 
 ```bash
 npm publish
