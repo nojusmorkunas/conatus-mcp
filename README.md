@@ -16,7 +16,7 @@ The local mode is the recommended default. The AI host starts one MCP process fo
 
 ### One-command setup
 
-Run the interactive installer to validate your Conatus URL and scoped API token, then register the server with Claude Desktop, Cursor, or another JSON MCP configuration file:
+Run the interactive installer to validate your Conatus URL and scoped API token, then register the server with Claude Desktop, Claude Code, Cursor, or another JSON MCP configuration file:
 
 ```bash
 npx -y conatus-mcp setup

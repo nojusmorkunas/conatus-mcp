@@ -6,28 +6,74 @@ import { stdin as input, stdout as output } from "node:process";
 
 type JsonConfig = { mcpServers?: Record<string, unknown>; [key: string]: unknown };
 
+/** Must match the `name` field in package.json — this is what `npx` resolves. */
+export const PACKAGE_NAME = "conatus-mcp";
+
+type Prompt = {
+  question: (query: string) => Promise<string>;
+  secret: (query: string) => Promise<string>;
+  close: () => void;
+};
+
+type Output = NodeJS.WritableStream & { write: (chunk: string) => boolean };
+
+/**
+ * A readline interface whose echo can be suppressed, so secrets never reach the
+ * terminal or its scrollback.
+ *
+ * Every character readline echoes goes out through `output.write`, so wrapping that
+ * one call is enough — no private readline internals are involved. The wrapper is a
+ * Proxy rather than a fresh stream so that `isTTY`, `columns` and the cursor helpers
+ * keep pointing at the real terminal.
+ */
+export function createPrompt(input: NodeJS.ReadableStream, output: Output): Prompt {
+  let muted = false;
+  const maskable = new Proxy(output, {
+    get(target, property, receiver) {
+      if (property === "write") {
+        return (chunk: string, ...rest: unknown[]) =>
+          muted ? true : (target.write as (...args: unknown[]) => boolean)(chunk, ...rest);
+      }
+      const value = Reflect.get(target, property, receiver);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+  const rl = createInterface({ input, output: maskable, terminal: true });
+
+  return {
+    question: (query) => rl.question(query),
+    secret: async (query) => {
+      output.write(query);
+      muted = true;
+      try {
+        return await rl.question("");
+      } finally {
+        muted = false;
+        output.write("\n"); // readline's own newline was swallowed while muted.
+      }
+    },
+    close: () => rl.close(),
+  };
+}
+
 type ClientTarget = {
   label: string;
   path: string;
 };
 
-function targetPaths(): ClientTarget[] {
+export function targetPaths(): ClientTarget[] {
   const home = homedir();
-  if (process.platform === "darwin") {
-    return [
-      { label: "Claude Desktop", path: join(home, "Library", "Application Support", "Claude", "claude_desktop_config.json") },
-      { label: "Cursor", path: join(home, ".cursor", "mcp.json") },
-    ];
-  }
-  if (process.platform === "win32") {
-    const appData = process.env.APPDATA ?? join(home, "AppData", "Roaming");
-    return [
-      { label: "Claude Desktop", path: join(appData, "Claude", "claude_desktop_config.json") },
-      { label: "Cursor", path: join(home, ".cursor", "mcp.json") },
-    ];
-  }
+  const desktopDir =
+    process.platform === "darwin"
+      ? join(home, "Library", "Application Support", "Claude")
+      : process.platform === "win32"
+        ? join(process.env.APPDATA ?? join(home, "AppData", "Roaming"), "Claude")
+        : join(home, ".config", "Claude");
   return [
-    { label: "Claude Desktop", path: join(home, ".config", "Claude", "claude_desktop_config.json") },
+    { label: "Claude Desktop", path: join(desktopDir, "claude_desktop_config.json") },
+    // Claude Code keeps user-scope servers in ~/.claude.json on every platform, and
+    // does not read claude_desktop_config.json.
+    { label: "Claude Code", path: join(home, ".claude.json") },
     { label: "Cursor", path: join(home, ".cursor", "mcp.json") },
   ];
 }
@@ -63,10 +109,10 @@ export async function runSetup() {
   if (!input.isTTY || !output.isTTY) {
     throw new Error("Setup needs an interactive terminal. Configure TASKS_BASE_URL and TASKS_API_TOKEN directly for non-interactive use.");
   }
-  const prompt = createInterface({ input, output });
+  const prompt = createPrompt(input, output);
   try {
     const baseUrl = normalizeBaseUrl(await prompt.question("Conatus URL (for example https://tasks.example.com): "));
-    const token = (await prompt.question("Scoped Conatus API token: ")).trim();
+    const token = (await prompt.secret("Scoped Conatus API token: ")).trim();
     if (!/^(?:tdc|tdm)_[A-Za-z0-9_-]{32}$/.test(token)) {
       throw new Error("That API token has an invalid format. Nothing was written.");
     }
@@ -91,7 +137,7 @@ export async function runSetup() {
     const servers = { ...(config.mcpServers ?? {}) };
     servers.conatus = {
       command: "npx",
-      args: ["-y", "@conatus/mcp-server"],
+      args: ["-y", PACKAGE_NAME],
       env: { TASKS_BASE_URL: baseUrl.href.replace(/\/$/, ""), TASKS_API_TOKEN: token },
     };
     config.mcpServers = servers;
