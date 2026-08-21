@@ -1,6 +1,6 @@
 {
   "name": "conatus-mcp",
-  "version": "0.1.0",
+  "version": "0.2.0-beta.3",
   "description": "MCP server for the self-hosted Conatus task manager",
   "type": "module",
   "repository": {
@@ -12,7 +12,7 @@
     "url": "https://github.com/nojusmorkunas/conatus-mcp/issues"
   },
   "bin": {
-    "conatus-mcp": "dist/stdio.js",
+    "conatus-mcp": "dist/cli.js",
     "conatus-mcp-http": "dist/http.js"
   },
   "files": [
@@ -22,9 +22,9 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "tsx src/stdio.ts",
+    "dev": "tsx src/cli.ts",
     "dev:http": "tsx src/http.ts",
-    "start": "node dist/stdio.js",
+    "start": "node dist/cli.js",
     "start:http": "node dist/http.js",
     "test": "vitest run",
     "lint": "tsc -p tsconfig.json --noEmit",
@@ -37,7 +37,7 @@
     "todoist",
     "ai-agent"
   ],
-  "license": "AGPL-3.0-only",
+  "license": "AGPL-3.0-or-later",
   "publishConfig": {
     "access": "public"
   },
@@ -51,9 +51,9 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
-    "@types/node": "^20.19.25",
+    "@types/node": "^26.1.1",
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.1.0"
   }
 }
