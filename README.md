@@ -169,7 +169,9 @@ npm publishing uses [trusted publishing](https://docs.npmjs.com/trusted-publishe
 To publish by hand instead:
 
 ```bash
-npm publish
+npm publish --tag latest   # or --tag beta for a prerelease
 ```
+
+Name the dist-tag explicitly. npm rejects a bare `npm publish` for any version with a semver prerelease suffix, which every `0.x.y-beta.z` has.
 
 `prepublishOnly` reruns the test, lint and build checks. `publishConfig.access` is already set, so no `--access` flag is needed.

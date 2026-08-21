@@ -120,5 +120,9 @@ jobs:
 
       # Prereleases go to the beta dist-tag so `npx conatus-mcp` keeps resolving
       # to the newest stable release.
+      #
+      # The tag is always explicit. npm rejects an implicit publish of a version
+      # carrying a semver prerelease suffix, so a 0.2.0-beta.4 shipped as a normal
+      # GitHub release fails unless `latest` is spelled out here.
       - name: Publish
-        run: npm publish ${{ github.event.release.prerelease && '--tag beta' || '' }}
+        run: npm publish --tag ${{ github.event.release.prerelease && 'beta' || 'latest' }}
