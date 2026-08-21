@@ -160,14 +160,15 @@ npx @modelcontextprotocol/inspector node dist/cli.js
 
 ## Releasing
 
-Publishing a GitHub release builds and pushes `ghcr.io/nojusmorkunas/conatus-mcp` for `linux/amd64` and `linux/arm64`. Tag the release `vX.Y.Z` to match `package.json`.
+Publishing a GitHub release builds `ghcr.io/nojusmorkunas/conatus-mcp` for `linux/amd64` and `linux/arm64`, then publishes the npm package. Both come from the released commit, so a release either produces both artifacts or neither.
 
-The npm package is published by hand:
+Tag the release `vX.Y.Z` matching `package.json`; the npm job refuses to publish a mismatch. Mark prereleases as such on GitHub and they go to the `beta` dist-tag, leaving `latest` on the newest stable release.
+
+npm publishing uses [trusted publishing](https://docs.npmjs.com/trusted-publishers), so this repository stores no npm token. It requires a one-time configuration on the package's npmjs.com settings page linking it to this repository and the `Publish release` workflow.
+
+To publish by hand instead:
 
 ```bash
-npm test
-npm run build
-npm pack --dry-run
 npm publish
 ```
 

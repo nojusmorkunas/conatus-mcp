@@ -1,11 +1,11 @@
-name: Publish release image
+name: Publish release
 
 on:
   release:
     types: [published]
 
 concurrency:
-  group: release-image-${{ github.event.release.tag_name }}
+  group: release-${{ github.event.release.tag_name }}
   cancel-in-progress: false
 
 permissions:
@@ -78,3 +78,47 @@ jobs:
           subject-name: ${{ env.REGISTRY }}/${{ github.repository }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
+
+  npm:
+    name: Publish npm package
+    needs: publish
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the released commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing exchanges this job's OIDC token for a short-lived
+      # registry credential, so no npm token is stored in this repository. It
+      # needs a newer npm than Node 22 ships with.
+      - name: Update npm
+        run: npm install --global npm@latest
+
+      - name: Install dependencies
+        run: npm ci
+
+      # A release tagged v0.3.0 shipping package.json 0.2.0 would publish a
+      # version nobody can correlate with the release notes or the image tag.
+      - name: Check the tag matches package.json
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          package_version="$(node -p 'require("./package.json").version')"
+          if [ "${RELEASE_TAG#v}" != "$package_version" ]; then
+            echo "Release $RELEASE_TAG does not match package.json $package_version" >&2
+            exit 1
+          fi
+
+      # Prereleases go to the beta dist-tag so `npx conatus-mcp` keeps resolving
+      # to the newest stable release.
+      - name: Publish
+        run: npm publish ${{ github.event.release.prerelease && '--tag beta' || '' }}
