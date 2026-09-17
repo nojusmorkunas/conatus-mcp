@@ -105,4 +105,15 @@ describe("MCP server", () => {
       expect.objectContaining({ type: "text", text: expect.stringContaining("Unexpected request") }),
     ]);
   });
+
+  // The SDK converts registered zod schemas with a hardcoded draft-07 target, and
+  // clients that validate results against a 2020-12-only Ajv reject every tool that
+  // advertises one. The schema said nothing useful, so no tool declares an output
+  // schema; results still carry structuredContent.
+  test("advertises no output schema", async () => {
+    const { client } = await connectedClient();
+    const tools = await client.listTools();
+
+    expect(tools.tools.filter((tool) => tool.outputSchema)).toEqual([]);
+  });
 });
