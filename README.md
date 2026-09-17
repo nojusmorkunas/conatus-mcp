@@ -22,7 +22,11 @@ Run the interactive installer to validate your Conatus URL and scoped API token,
 npx -y conatus-mcp setup
 ```
 
-The installer never echoes the token, verifies it before changing a config file, and restricts the written configuration file to owner-only permissions where the operating system supports them. Restart the chosen client when it finishes. The direct configuration below remains the non-interactive fallback.
+Both menus are arrow-key pickers. Move with up and down, tick a client with space, press `a` to tick every client, then enter to confirm. Pressing enter without ticking anything takes the highlighted row, so installing into one client needs no space bar. Escape or ctrl-c quits before anything is written.
+
+If earlier runs already left working tokens in those configs, the installer lists every Conatus installation it found, names the clients pointed at each one, and lets you pick which to install. The last option is always a fresh URL and token. Two clients sharing a token show up once, since a scoped token only works against the installation that issued it, so URL and token always travel together.
+
+The installer never echoes the token, verifies it before changing any config file, and restricts every file it writes to owner-only permissions where the operating system supports them. Existing servers in those files are left alone. Restart the clients you chose when it finishes. The direct configuration below remains the non-interactive fallback.
 
 ```json
 {
