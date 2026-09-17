@@ -13,7 +13,6 @@ const color = z.enum([
   "gray", "red", "orange", "amber", "yellow", "lime", "green", "teal",
   "cyan", "blue", "indigo", "purple", "pink",
 ]);
-const outputSchema = { result: z.unknown() };
 
 function ok(summary: string, result: unknown): CallToolResult {
   return {
@@ -67,7 +66,6 @@ export function createTaskManagerServer(api: TaskApiClient) {
     {
       title: "Get workspace context",
       description: "Get the authenticated user, timezone, local date, Inbox, server time and granted scopes.",
-      outputSchema,
       annotations: readOnly,
     },
     () => run(() => api.context(), (value) => `Workspace date is ${value.today} in ${value.user.timezone}.`),
@@ -75,13 +73,13 @@ export function createTaskManagerServer(api: TaskApiClient) {
 
   server.registerTool(
     "list_projects",
-    { title: "List projects", description: "List all accessible active projects, including Inbox and shared projects.", outputSchema, annotations: readOnly },
+    { title: "List projects", description: "List all accessible active projects, including Inbox and shared projects.", annotations: readOnly },
     () => run(() => api.listProjects(), (value) => `Found ${value.length} projects.`),
   );
 
   server.registerTool(
     "get_project",
-    { title: "Get project", description: "Get one project and its sections.", inputSchema: { projectId: uuid }, outputSchema, annotations: readOnly },
+    { title: "Get project", description: "Get one project and its sections.", inputSchema: { projectId: uuid }, annotations: readOnly },
     ({ projectId }) => run(() => api.getProject(projectId), (value) => `Loaded project “${value.name}”.`),
   );
 
@@ -91,7 +89,6 @@ export function createTaskManagerServer(api: TaskApiClient) {
       title: "Create project",
       description: "Create a project. Omit parentId for a top-level project.",
       inputSchema: { name: z.string().trim().min(1).max(120), color: color.optional(), icon: z.string().max(16).nullable().optional(), parentId: uuid.nullable().optional() },
-      outputSchema,
       annotations: mutation,
     },
     (input) => run(() => api.createProject(input), (value) => `Created project “${value.name}”.`),
@@ -103,7 +100,6 @@ export function createTaskManagerServer(api: TaskApiClient) {
       title: "Update project",
       description: "Rename, recolor, favorite, archive or reparent a project. Inbox cannot be renamed or archived.",
       inputSchema: { projectId: uuid, name: z.string().trim().min(1).max(120).optional(), color: color.optional(), icon: z.string().max(16).nullable().optional(), parentId: uuid.nullable().optional(), isFavorite: z.boolean().optional(), isArchived: z.boolean().optional() },
-      outputSchema,
       annotations: mutation,
     },
     ({ projectId, ...changes }) => run(() => api.updateProject(projectId, changes), (value) => `Updated project “${value.name}”.`),
@@ -115,7 +111,6 @@ export function createTaskManagerServer(api: TaskApiClient) {
       title: "Create section",
       description: "Create a section in a project. afterId null places it first.",
       inputSchema: { projectId: uuid, name: z.string().trim().min(1).max(120), afterId: uuid.nullable().optional() },
-      outputSchema,
       annotations: mutation,
     },
     (input) => run(() => api.createSection(input), (value) => `Created section “${value.name}”.`),
@@ -127,7 +122,6 @@ export function createTaskManagerServer(api: TaskApiClient) {
       title: "Update section",
       description: "Rename or archive a section. Supply exactly the fields to change.",
       inputSchema: { sectionId: uuid, name: z.string().trim().min(1).max(120).optional(), isArchived: z.boolean().optional() },
-      outputSchema,
       annotations: mutation,
     },
     ({ sectionId, ...changes }) => run(() => api.updateSection(sectionId, changes), (value) => `Updated section “${value.name}”.`),
@@ -144,7 +138,6 @@ export function createTaskManagerServer(api: TaskApiClient) {
         dueBefore: date.optional(), dueAfter: date.optional(), query: z.string().trim().max(500).optional(),
         cursor: z.string().optional(), limit: z.number().int().min(1).max(100).optional(),
       },
-      outputSchema,
       annotations: readOnly,
     },
     (input) => run(() => api.listTasks(input), (value) => `Found ${value.items.length} tasks${value.nextCursor ? "; more are available" : ""}.`),
@@ -152,7 +145,7 @@ export function createTaskManagerServer(api: TaskApiClient) {
 
   server.registerTool(
     "get_task",
-    { title: "Get task", description: "Get one task with labels and, when authorized, comments and reminders.", inputSchema: { taskId: uuid }, outputSchema, annotations: readOnly },
+    { title: "Get task", description: "Get one task with labels and, when authorized, comments and reminders.", inputSchema: { taskId: uuid }, annotations: readOnly },
     ({ taskId }) => run(() => api.getTask(taskId), (value) => `Loaded task “${value.content}”.`),
   );
 
@@ -176,7 +169,6 @@ export function createTaskManagerServer(api: TaskApiClient) {
       title: "Create task",
       description: "Create a structured task. dueTime and recurrence require dueDate; recurrenceEndDate requires recurrence and cannot precede dueDate. Reuse idempotencyKey when retrying the same creation.",
       inputSchema: taskFields,
-      outputSchema,
       annotations: { ...mutation, idempotentHint: true },
     },
     ({ idempotencyKey, ...input }) => run(() => api.createTask(input, idempotencyKey ?? randomUUID()), (value) => `Created task “${value.content}”.`),
@@ -188,7 +180,6 @@ export function createTaskManagerServer(api: TaskApiClient) {
       title: "Quick add task",
       description: "Parse and create a task from text using #project, @label, p1-p4, dates, times, deadlines in braces, durations and recurrence.",
       inputSchema: { text: z.string().trim().min(1).max(1000), idempotencyKey: z.string().trim().min(1).max(200).optional() },
-      outputSchema,
       annotations: { ...mutation, idempotentHint: true },
     },
     ({ text, idempotencyKey }) => run(() => api.quickAddTask(text, idempotencyKey ?? randomUUID()), (value) => `Created task “${value.task.content}”${value.warnings.length ? ` with ${value.warnings.length} warning(s)` : ""}.`),
@@ -204,7 +195,6 @@ export function createTaskManagerServer(api: TaskApiClient) {
         priority: z.number().int().min(1).max(4).optional(), projectId: uuid.optional(), assigneeId: uuid.nullable().optional(), sectionId: uuid.nullable().optional(),
         dueDate: date.nullable().optional(), dueTime: time.nullable().optional(), deadlineDate: date.nullable().optional(), recurrence: z.string().max(120).nullable().optional(), recurrenceEndDate: date.nullable().optional(), durationMinutes: z.number().int().min(1).max(1440).nullable().optional(),
       },
-      outputSchema,
       annotations: mutation,
     },
     ({ taskId, ...changes }) => run(() => api.updateTask(taskId, changes), (value) => `Updated task “${value.content}”.`),
@@ -216,7 +206,6 @@ export function createTaskManagerServer(api: TaskApiClient) {
       title: "Move task",
       description: "Move or reorder a task. afterId null places it first. A subtask inherits its parent's section.",
       inputSchema: { taskId: uuid, sectionId: uuid.nullable(), parentId: uuid.nullable().optional(), afterId: uuid.nullable() },
-      outputSchema,
       annotations: mutation,
     },
     ({ taskId, ...placement }) => run(() => api.updateTask(taskId, placement), (value) => `Moved task “${value.content}”.`),
@@ -228,38 +217,38 @@ export function createTaskManagerServer(api: TaskApiClient) {
   ] as const) {
     server.registerTool(
       name,
-      { title, description: completed ? "Complete a task. Recurring tasks advance to their next occurrence." : "Mark a completed non-recurring task as active again.", inputSchema: { taskId: uuid }, outputSchema, annotations: { ...mutation, idempotentHint: true } },
+      { title, description: completed ? "Complete a task. Recurring tasks advance to their next occurrence." : "Mark a completed non-recurring task as active again.", inputSchema: { taskId: uuid }, annotations: { ...mutation, idempotentHint: true } },
       ({ taskId }) => run(() => api.updateTask(taskId, { completed }), (value) => `${completed ? "Completed" : "Reopened"} task “${value.content}”.`),
     );
   }
 
   server.registerTool(
     "set_task_labels",
-    { title: "Set task labels", description: "Replace all personal labels on a task with the supplied label IDs.", inputSchema: { taskId: uuid, labelIds: z.array(uuid).max(100) }, outputSchema, annotations: { ...mutation, idempotentHint: true } },
+    { title: "Set task labels", description: "Replace all personal labels on a task with the supplied label IDs.", inputSchema: { taskId: uuid, labelIds: z.array(uuid).max(100) }, annotations: { ...mutation, idempotentHint: true } },
     ({ taskId, labelIds }) => run(() => api.updateTask(taskId, { labelIds }), (value) => `Set ${value.labels?.length ?? labelIds.length} labels on “${value.content}”.`),
   );
 
   server.registerTool(
     "list_labels",
-    { title: "List labels", description: "List the authenticated user's labels.", outputSchema, annotations: readOnly },
+    { title: "List labels", description: "List the authenticated user's labels.", annotations: readOnly },
     () => run(() => api.listLabels(), (value) => `Found ${value.length} labels.`),
   );
 
   server.registerTool(
     "create_label",
-    { title: "Create label", description: "Create a personal label.", inputSchema: { name: z.string().trim().min(1).max(120), color: color.optional() }, outputSchema, annotations: mutation },
+    { title: "Create label", description: "Create a personal label.", inputSchema: { name: z.string().trim().min(1).max(120), color: color.optional() }, annotations: mutation },
     (input) => run(() => api.createLabel(input), (value) => `Created label “${value.name}”.`),
   );
 
   server.registerTool(
     "add_comment",
-    { title: "Add comment", description: "Add a comment to exactly one task or project.", inputSchema: { taskId: uuid.optional(), projectId: uuid.optional(), content: z.string().trim().min(1).max(2000) }, outputSchema, annotations: mutation },
+    { title: "Add comment", description: "Add a comment to exactly one task or project.", inputSchema: { taskId: uuid.optional(), projectId: uuid.optional(), content: z.string().trim().min(1).max(2000) }, annotations: mutation },
     (input) => run(() => api.addComment(input), () => "Added comment."),
   );
 
   server.registerTool(
     "set_reminder",
-    { title: "Set reminder", description: "Create a personal absolute reminder. remindAt must be an ISO 8601 datetime with timezone.", inputSchema: { taskId: uuid, remindAt: z.string().datetime({ offset: true }) }, outputSchema, annotations: mutation },
+    { title: "Set reminder", description: "Create a personal absolute reminder. remindAt must be an ISO 8601 datetime with timezone.", inputSchema: { taskId: uuid, remindAt: z.string().datetime({ offset: true }) }, annotations: mutation },
     (input) => run(() => api.createReminder(input), (value) => `Set reminder for ${value.remindAt}.`),
   );
 
