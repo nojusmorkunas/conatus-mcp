@@ -118,11 +118,19 @@ jobs:
             exit 1
           fi
 
+      # Staged, not direct. The trusted publisher for this package grants
+      # stage-publish only, so `npm publish` from this workflow is rejected. This
+      # uploads the tarball and stops; a maintainer approves it with 2FA on
+      # npmjs.com or via `npm stage approve <stage-id>` before anyone can install
+      # it. Staging never prompts for 2FA, which is what lets it run here.
+      #
       # Prereleases go to the beta dist-tag so `npx conatus-mcp` keeps resolving
-      # to the newest stable release.
+      # to the newest stable release. The dist-tag is fixed when the version is
+      # staged and cannot be changed at approval, so a release marked prerelease
+      # by mistake has to be rejected and re-staged.
       #
       # The tag is always explicit. npm rejects an implicit publish of a version
       # carrying a semver prerelease suffix, so a 0.2.0-beta.4 shipped as a normal
       # GitHub release fails unless `latest` is spelled out here.
-      - name: Publish
-        run: npm publish --tag ${{ github.event.release.prerelease && 'beta' || 'latest' }}
+      - name: Stage for publishing
+        run: npm stage publish --tag ${{ github.event.release.prerelease && 'beta' || 'latest' }}

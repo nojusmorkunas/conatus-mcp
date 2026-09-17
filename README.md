@@ -164,11 +164,28 @@ npx @modelcontextprotocol/inspector node dist/cli.js
 
 ## Releasing
 
-Publishing a GitHub release builds `ghcr.io/nojusmorkunas/conatus-mcp` for `linux/amd64` and `linux/arm64`, then publishes the npm package. Both come from the released commit, so a release either produces both artifacts or neither.
+Publishing a GitHub release builds `ghcr.io/nojusmorkunas/conatus-mcp` for `linux/amd64` and `linux/arm64`, then stages the npm package. Both come from the released commit.
 
 Tag the release `vX.Y.Z` matching `package.json`; the npm job refuses to publish a mismatch. Mark prereleases as such on GitHub and they go to the `beta` dist-tag, leaving `latest` on the newest stable release.
 
-npm publishing uses [trusted publishing](https://docs.npmjs.com/trusted-publishers), so this repository stores no npm token. It requires a one-time configuration on the package's npmjs.com settings page linking it to this repository and the `Publish release` workflow.
+The release event reads this workflow from the commit the tag points at, not from `main`. Changing the workflow only takes effect for releases tagged afterwards.
+
+### Approving a staged release
+
+npm publishing uses [trusted publishing](https://docs.npmjs.com/trusted-publishers), so this repository stores no npm token. The trusted publisher grants [staged publishing](https://docs.npmjs.com/staged-publishing/) only, which means the workflow uploads the tarball and stops. Nobody can install that version until a maintainer approves it.
+
+Approve it in the Staged Packages tab on npmjs.com, or from a terminal:
+
+```bash
+npm stage list
+npm stage approve <stage-id>
+```
+
+Both ask for 2FA. Inspect the tarball first with `npm stage download <stage-id>` if the release was not cut by hand.
+
+The dist-tag is fixed when the version is staged and cannot be changed at approval. A release accidentally marked prerelease stages to `beta`, so reject it with `npm stage reject <stage-id>` and cut a new release rather than trying to retag it.
+
+Direct publishing from CI is deliberately not granted. Anything able to trigger the workflow could otherwise push a version to npm with no human in the loop, and this package holds a scoped API token on the machines that install it.
 
 To publish by hand instead:
 
